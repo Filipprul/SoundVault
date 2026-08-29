@@ -1,5 +1,6 @@
 from downloader import SoundVaultDownloader
 
+
 def main():
     print("=== SoundVault Audio Downloader ===")
 
@@ -17,5 +18,5 @@ def main():
     print("\nProcess completed successfully!")
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     main()

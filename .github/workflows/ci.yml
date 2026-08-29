@@ -1,0 +1,26 @@
+name: Python Lint with Ruff
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  lint:
+    name: Ruff Lint and Format Check
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: Run Ruff Lint Check
+        uses: astral-sh/ruff-action@v3
+        with:
+          args: "check ."
+
+      - name: Run Ruff Format Check
+        uses: astral-sh/ruff-action@v3
+        with:
+          args: "format --check ."
