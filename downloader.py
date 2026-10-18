@@ -87,17 +87,15 @@ class SoundVaultDownloader:
             'quiet': True,
             'noprogress': True,
             'progress_hooks': [self._progress_hook],
+            'writethumbnail': True,
 
             'postprocessors': [
-                {
-                    'key': 'FFmpegExtractAudio',
-                    'preferredcodec': audio_format,
-                    'preferredquality': audio_quality,
-                },
-                {'key': 'FFmpegMetadata'},
-                {'key': 'EmbedThumbnail'},
+                {'key': 'FFmpegExtractAudio', 'preferredcodec': audio_format, 'preferredquality': audio_quality,},
+                {'key': 'FFmpegThumbnailsConvertor','format': 'jpg',},
+                {'key': 'FFmpegMetadata', 'add_metadata': True},
+                {'key': 'EmbedThumbnail', 'already_have_thumbnail': False,},
+                {'key': 'FFmpegDeleteOriginalFiles'},
             ],
-            'writethumbnail': True,
             'clean_infojson': True,
         }
 

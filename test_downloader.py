@@ -41,6 +41,16 @@ class TestSoundVault(unittest.TestCase):
     def test_audio_format_setting(self):
         self.assertEqual(self.downloader.config.get("audio_format"), "mp3")
 
+    def test_metadata_and_thumbnail_postprocessors(self):
+        opts = {
+            'postprocessors': [
+                {'key': 'FFmpegMetadata', 'add_metadata': True},
+                {'key': 'EmbedThumbnail'}
+            ]
+        }
+        keys = [p['key'] for p in opts['postprocessors']]
+        self.assertIn('FFmpegMetadata', keys)
+        self.assertIn('EmbedThumbnail', keys)
 
 if __name__ == '__main__':
     unittest.main()
