@@ -25,7 +25,7 @@ class SoundVaultDownloader:
     def download(self, playlist_url: str) -> None:
         ydl_opts = {
             'format': 'bestaudio/best',
-            'outtmpl': str(self.download_directory / '%(title)s.%(ext)s'),
+            'outtmpl': {'default': str(self.download_directory / '%(playlist_title,downloads)s' / '%(title)s.%(ext)s')},
             'ignoreerrors': True,
             'download_archive': str(self.archive_file),
             'js_runtimes': {'node': {}},
