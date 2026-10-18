@@ -1,11 +1,15 @@
 import json
 import socket
+from collections.abc import Callable
 from pathlib import Path
 
 import yt_dlp
 
 
 class SoundVaultLogger:
+    def __init__(self, status_callback: Callable[[str], None] | None = None):
+        self.status_callback = status_callback
+
     def debug(self, msg):
         pass
 
@@ -14,14 +18,25 @@ class SoundVaultLogger:
 
     def error(self, msg):
         if "getaddrinfo failed" in msg or "TransportError" in msg or "Name or service not known" in msg:
-            raise ConnectionError("Internetverbindung während des Vorgangs verloren!")
+            err_msg = "Internetverbindung während des Vorgangs verloren!"
+            if self.status_callback:
+                self.status_callback(err_msg)
+            raise ConnectionError(err_msg)
 
 
 class SoundVaultDownloader:
-    def __init__(self, config_file: str = "config.json"):
+    def __init__(
+        self,
+        config_file: str = "config.json",
+        progress_callback: Callable[[dict], None] | None = None,
+        status_callback: Callable[[str], None] | None = None
+    ):
         self.base_dir = Path(__file__).resolve().parent
         self.config_path = self.base_dir / config_file
         self.config = self._load_config()
+
+        self.progress_callback = progress_callback
+        self.status_callback = status_callback
 
         self.download_directory = self.base_dir / self.config.get("download_dir", "downloads")
         self.archive_file = self.base_dir / 'archive.txt'
@@ -55,7 +70,13 @@ class SoundVaultDownloader:
 
     def _progress_hook(self, d: dict) -> None:
         if not self.check_network():
-            raise ConnectionError("Internetverbindung während des Downloads verloren!")
+            msg = "Internetverbindung während des Downloads verloren!"
+            if self.status_callback:
+                self.status_callback(msg)
+            raise ConnectionError(msg)
+
+        if self.progress_callback:
+            self.progress_callback(d)
 
         if d['status'] == 'downloading':
             filename = Path(d.get('filename', '')).name
@@ -67,7 +88,11 @@ class SoundVaultDownloader:
 
         elif d['status'] == 'finished':
             filename = Path(d.get('filename', '')).name
-            print(f"\n[Finished] {filename} -> Processing audio & metadata...")
+            msg = f"\n[Finished] {filename} -> Processing audio & metadata..."
+            if self.status_callback:
+                self.status_callback(msg)
+            else:
+                print(msg)
 
     def download(self, playlist_url: str) -> None:
         if not self.check_network():
@@ -83,7 +108,7 @@ class SoundVaultDownloader:
             'no_warnings': True,
             'download_archive': str(self.archive_file),
             'js_runtimes': {'node': {}},
-            'logger': SoundVaultLogger(),
+            'logger': SoundVaultLogger(status_callback=self.status_callback),
             'retries': 1,
             'fragment_retries': 1,
             'socket_timeout': 3,
