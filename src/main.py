@@ -1,6 +1,6 @@
 import sys
 
-from downloader import SoundVaultDownloader
+from src.downloader import SoundVaultDownloader
 
 
 def get_valid_url() -> str:

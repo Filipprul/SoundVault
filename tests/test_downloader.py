@@ -3,7 +3,7 @@ import shutil
 import unittest
 from pathlib import Path
 
-from downloader import SoundVaultDownloader
+from src.downloader import SoundVaultDownloader
 
 
 class TestSoundVault(unittest.TestCase):
