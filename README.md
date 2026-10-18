@@ -17,3 +17,12 @@ SoundVault is a CLI audio downloader built with Python, yt-dlp, and FFmpeg. It s
    ```bash
    git clone https://github.com/Filipprul/SoundVault.git
    cd SoundVault
+   
+## Disclaimer
+
+SoundVault is intended solely for personal use and for downloading 
+or backing up user-owned or royalty-free audio content. 
+Please respect the copyright of content creators and comply 
+with the terms of service of the respective platforms. 
+The developer assumes no liability for any unauthorized 
+or illegal use of this software.
