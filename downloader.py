@@ -1,3 +1,4 @@
+import json
 import socket
 from pathlib import Path
 import yt_dlp
@@ -14,11 +15,32 @@ class SoundVaultLogger:
             raise ConnectionError("Internetverbindung während des Vorgangs verloren!")
 
 class SoundVaultDownloader:
-    def __init__(self, download_dir: str = "downloads"):
+    def __init__(self, config_file: str = "config.json"):
         self.base_dir = Path(__file__).resolve().parent
-        self.download_directory = self.base_dir / download_dir
+        self.config_path = self.base_dir / config_file
+        self.config = self._load_config()
+
+        self.download_directory = self.base_dir / self.config.get("download_dir", "downloads")
         self.archive_file = self.base_dir / 'archive.txt'
         self.download_directory.mkdir(parents=True, exist_ok=True)
+
+    def _load_config(self) -> dict:
+        default_config = {
+            "download_dir": "downloads",
+            "audio_format": "mp3",
+            "audio_quality": "0"
+        }
+
+        if not self.config_path.exists():
+            with open(self.config_path, 'w', encoding='utf-8') as f:
+                json.dump(default_config, f, indent=4)
+            return default_config
+
+        try:
+            with open(self.config_path, 'r', encoding='utf-8') as f:
+                return json.load(f)
+        except Exception:
+            return default_config
 
     @staticmethod
     def check_network() -> bool:
@@ -48,6 +70,9 @@ class SoundVaultDownloader:
         if not self.check_network():
             raise ConnectionError("No active internet connection. Please check your network and try again.")
 
+        audio_format = self.config.get("audio_format", "mp3")
+        audio_quality = self.config.get("audio_quality", "0")
+
         ydl_opts = {
             'format': 'bestaudio/best',
             'outtmpl': {'default': str(self.download_directory / '%(playlist_title,downloads)s' / '%(title)s.%(ext)s')},
@@ -66,8 +91,8 @@ class SoundVaultDownloader:
             'postprocessors': [
                 {
                     'key': 'FFmpegExtractAudio',
-                    'preferredcodec': 'mp3',
-                    'preferredquality': '0',
+                    'preferredcodec': audio_format,
+                    'preferredquality': audio_quality,
                 },
                 {'key': 'FFmpegMetadata'},
                 {'key': 'EmbedThumbnail'},
