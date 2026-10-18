@@ -1,46 +1,51 @@
-import os
+from pathlib import Path
 import yt_dlp
 
 class SoundVaultDownloader:
-    def __init__(self, download_dir = "downloads"):
+    def __init__(self, download_dir: str = "downloads"):
         # "C:\Filipps Fotos-Videos"
-        self.base_dir = os.path.dirname(os.path.abspath(__file__))
-        self.download_directory = os.path.join(self.base_dir, download_dir)
-        self.archive_file = os.path.join(self.base_dir, 'archive.txt')
+        self.base_dir = Path(__file__).resolve().parent
+        self.download_directory = self.base_dir / download_dir
+        self.archive_file = self.base_dir / 'archive.txt'
+        self.download_directory.mkdir(parents=True, exist_ok=True)
 
-    def download(self, playlist_url):
+    def _progress_hook(self, d: dict) -> None:
+        if d['status'] == 'downloading':
+            filename = Path(d.get('filename', '')).name
+            percent = d.get('_percent_str', '0.0%').strip()
+            speed = d.get('_speed_str', 'N/A').strip()
+            eta = d.get('_eta_str', 'N/A').strip()
+
+            print(f"\r[Downloading] {percent} of {filename} ({speed}, ETA: {eta})", end="", flush=True)
+
+        elif d['status'] == 'finished':
+            filename = Path(d.get('filename', '')).name
+            print(f"\n[Finished] {filename} -> Processing audio & metadata...")
+
+    def download(self, playlist_url: str) -> None:
         ydl_opts = {
-            # Extract the highest quality available audio stream
             'format': 'bestaudio/best',
-
-            # Define file output path and naming template (e.g., downloads/SongTitle.ext)
-            'outtmpl': os.path.join(self.download_directory, '%(title)s.%(ext)s'),
-
-            # Skip videos that throw errors (e.g., private or region-locked tracks) instead of stopping execution
+            'outtmpl': str(self.download_directory / '%(title)s.%(ext)s'),
             'ignoreerrors': True,
+            'download_archive': str(self.archive_file),
+            'js_runtimes': {'node': {}},
+            'quiet': True,
+            'noprogress': True,
+            'progress_hooks': [self._progress_hook],
 
-            # Keep track of unique YouTube video IDs to skip previously downloaded tracks instantly
-            'download_archive': self.archive_file,
 
-            # Post-processing chain applied sequentially after raw audio download completes
             'postprocessors': [
-                # Step 1: Extract audio and convert it to high-quality 320 kbps MP3 format via FFmpeg
                 {
                     'key': 'FFmpegExtractAudio',
                     'preferredcodec': 'mp3',
-                    'preferredquality': '320',
+                    'preferredquality': '0',
                 },
-                # Step 2: Write standard ID3 metadata tags (Title, Artist, Album) to the MP3 file
                 {'key': 'FFmpegMetadata'},
-
-                # Step 3: Embed the downloaded video thumbnail directly into the MP3 ID3 cover art tag
                 {'key': 'EmbedThumbnail'},
             ],
-
-            # Enable temporary thumbnail downloading required by the EmbedThumbnail postprocessor
             'writethumbnail': True,
+            'clean_infojson': True,
         }
 
-        # Initialize YoutubeDL client with specified options and execute batch download
         with yt_dlp.YoutubeDL(ydl_opts) as ydl:
             ydl.download([playlist_url])
