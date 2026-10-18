@@ -1,7 +1,9 @@
 import json
 import socket
 from pathlib import Path
+
 import yt_dlp
+
 
 class SoundVaultLogger:
     def debug(self, msg):
@@ -13,6 +15,7 @@ class SoundVaultLogger:
     def error(self, msg):
         if "getaddrinfo failed" in msg or "TransportError" in msg or "Name or service not known" in msg:
             raise ConnectionError("Internetverbindung während des Vorgangs verloren!")
+
 
 class SoundVaultDownloader:
     def __init__(self, config_file: str = "config.json"):
@@ -39,7 +42,7 @@ class SoundVaultDownloader:
         try:
             with open(self.config_path, 'r', encoding='utf-8') as f:
                 return json.load(f)
-        except Exception:
+        except (json.JSONDecodeError, OSError):
             return default_config
 
     @staticmethod
@@ -91,7 +94,7 @@ class SoundVaultDownloader:
 
             'postprocessors': [
                 {'key': 'FFmpegExtractAudio', 'preferredcodec': audio_format, 'preferredquality': audio_quality,},
-                {'key': 'FFmpegThumbnailsConvertor','format': 'jpg',},
+                {'key': 'FFmpegThumbnailsConvertor', 'format': 'jpg',},
                 {'key': 'FFmpegMetadata', 'add_metadata': True},
                 {'key': 'EmbedThumbnail', 'already_have_thumbnail': False,},
                 {'key': 'FFmpegDeleteOriginalFiles'},
@@ -102,8 +105,8 @@ class SoundVaultDownloader:
         try:
             with yt_dlp.YoutubeDL(ydl_opts) as ydl:
                 ydl.download([playlist_url])
-        except ConnectionError as ce:
-            raise ce
+        except ConnectionError:
+            raise
         except Exception as e:
             if not self.check_network():
                 raise ConnectionError("Internetverbindung unterbrochen.")

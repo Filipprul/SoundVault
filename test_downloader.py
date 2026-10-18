@@ -1,9 +1,9 @@
-import unittest
-from pathlib import Path
 import json
 import shutil
+import unittest
+from pathlib import Path
+
 from downloader import SoundVaultDownloader
-from main import get_valid_url
 
 
 class TestSoundVault(unittest.TestCase):

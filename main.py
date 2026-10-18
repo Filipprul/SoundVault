@@ -1,5 +1,7 @@
 import sys
+
 from downloader import SoundVaultDownloader
+
 
 def get_valid_url() -> str:
     while True:
@@ -13,7 +15,8 @@ def get_valid_url() -> str:
             print("Error: Input cannot be empty. Please try again.")
             continue
 
-        if not (url.startswith("http://") or url.startswith("https://")):
+        # PIE810: startswith mit Tuple statt 'or'
+        if not url.startswith(("http://", "https://")):
             print("Error: Please enter a valid URL starting with http:// or https://")
             continue
 
@@ -40,6 +43,7 @@ def main():
         sys.exit(0)
     except Exception as e:
         print(f"\nAn unexpected error occurred: {e}")
+
 
 if __name__ == '__main__':
     main()
