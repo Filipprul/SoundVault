@@ -119,10 +119,9 @@ class SoundVaultDownloader:
 
             'postprocessors': [
                 {'key': 'FFmpegExtractAudio', 'preferredcodec': audio_format, 'preferredquality': audio_quality,},
-                {'key': 'FFmpegThumbnailsConvertor', 'format': 'jpg',},
+                {'key': 'FFmpegThumbnailsConvertor', 'format': 'jpg'},
                 {'key': 'FFmpegMetadata', 'add_metadata': True},
-                {'key': 'EmbedThumbnail', 'already_have_thumbnail': False,},
-                {'key': 'FFmpegDeleteOriginalFiles'},
+                {'key': 'EmbedThumbnail', 'already_have_thumbnail': False},
             ],
             'clean_infojson': True,
         }
