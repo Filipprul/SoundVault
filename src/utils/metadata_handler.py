@@ -33,7 +33,11 @@ def fetch_metadata_from_musicbrainz(clean_title: str):
             if recordings:
                 rec = recordings[0]
                 title = rec.get("title")
-                artist = rec["artist-credit"][0]["name"] if "artist-credit" in rec else "Unknown Artist"
+                artist = (
+                    rec["artist-credit"][0]["name"]
+                    if "artist-credit" in rec
+                    else "Unknown Artist"
+                )
 
                 releases = rec.get("releases", [])
                 release = releases[0] if releases else {}
@@ -47,7 +51,7 @@ def fetch_metadata_from_musicbrainz(clean_title: str):
                     "artist": artist,
                     "album": album,
                     "year": date,
-                    "cover_url": cover_url
+                    "cover_url": cover_url,
                 }
     except Exception as e:
         print(f"Fehler bei MusicBrainz API: {e}")
@@ -62,7 +66,7 @@ def get_cover_art_url(release_id: str):
         res = requests.head(url, allow_redirects=True)
         if res.status_code == 200:
             return res.url
-    except Exception: # noqa: S110
+    except Exception:  # noqa: S110
         pass
     return None
 
@@ -88,13 +92,7 @@ def apply_id3_tags(file_path: str, metadata: dict):
         if cover_url:
             img_data = requests.get(cover_url).content
             audio.tags.add(
-                APIC(
-                    encoding=3,
-                    mime='image/jpeg',
-                    type=3,
-                    desc='Cover',
-                    data=img_data
-                )
+                APIC(encoding=3, mime="image/jpeg", type=3, desc="Cover", data=img_data)
             )
 
         audio.save()

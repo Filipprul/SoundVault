@@ -1,5 +1,8 @@
 {
     "download_dir": "downloads",
     "audio_format": "mp3",
-    "audio_quality": "0"
+    "audio_quality": "0",
+    "download_path": "./downloads",
+    "monitored_playlists": ["https://youtube.com/playlist?list=PLDIoUOhQQPlXr63I_vwF9GD8sAKh77dWU&si=cdkRaOtx-qUIwuPJ"],
+    "watchdog_interval_seconds": 1800
 }

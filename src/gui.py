@@ -1,11 +1,28 @@
+import json
 import threading
+from pathlib import Path
 
 import customtkinter as ctk
 
 from src.downloader import SoundVaultDownloader
+from src.watchdog import PlaylistWatchdog
 
 ctk.set_appearance_mode("System")
 ctk.set_default_color_theme("blue")
+
+
+def load_config() -> dict:
+    config_path = Path("config.json")
+    if config_path.exists():
+        try:
+            with open(config_path, "r", encoding="utf-8") as f:
+                return json.load(f)
+        except Exception:  # noqa: S110
+            pass
+    return {
+        "monitored_playlists": [],
+        "watchdog_interval_seconds": 1800,
+    }
 
 
 class SoundVaultApp(ctk.CTk):
@@ -17,7 +34,25 @@ class SoundVaultApp(ctk.CTk):
         self.geometry("600x420")
         self.resizable(False, False)
 
+        # Watchdog beim GUI-Start initialisieren
+        config = load_config()
+        playlists = config.get("monitored_playlists", [])
+        interval = config.get("watchdog_interval_seconds", 1800)
+
+        self.watchdog = PlaylistWatchdog(
+            playlist_urls=playlists,
+            interval_seconds=interval,
+            status_callback=lambda msg: self.after(0, lambda: self.status_label.configure(text=msg)),
+        )
+        self.watchdog.start()
+
         self._create_widgets()
+
+    def destroy(self):
+        # Watchdog beim Schließen der App sauber beenden
+        if hasattr(self, "watchdog"):
+            self.watchdog.stop()
+        super().destroy()
 
     def _create_widgets(self):
         self.title_label = ctk.CTkLabel(
@@ -105,7 +140,9 @@ class SoundVaultApp(ctk.CTk):
                 percent_display = f"{percent * 100:.1f}%"
             else:
                 percent_str = d.get("_percent_str", "0%")
-                clean_str = "".join(c for c in percent_str if c.isdigit() or c == '.')
+                clean_str = "".join(
+                    c for c in percent_str if c.isdigit() or c == "."
+                )
                 try:
                     percent = float(clean_str) / 100
                     percent_display = f"{percent * 100:.1f}%"
@@ -116,9 +153,12 @@ class SoundVaultApp(ctk.CTk):
             speed = d.get("_speed_str", "N/A").strip()
 
             self.after(0, lambda: self.progress_bar.set(percent))
-            self.after(0, lambda: self.status_label.configure(
-                text=f"Downloading... {percent_display} ({speed})"
-            ))
+            self.after(
+                0,
+                lambda: self.status_label.configure(
+                    text=f"Downloading... {percent_display} ({speed})"
+                ),
+            )
 
     def run_download(self, url):
         try:
@@ -127,22 +167,30 @@ class SoundVaultApp(ctk.CTk):
 
             downloader = SoundVaultDownloader(
                 progress_callback=self.update_progress,
-                status_callback=lambda msg: self.after(0, lambda: self.status_label.configure(text=msg)),
+                status_callback=lambda msg: self.after(
+                    0, lambda: self.status_label.configure(text=msg)
+                ),
             )
 
             downloader.config["audio_format"] = audio_format
             downloader.config["audio_quality"] = quality
             downloader.download(url)
 
-            self.after(0, lambda: self.status_label.configure(
-                text="Download completed successfully!", text_color="green"
-            ))
+            self.after(
+                0,
+                lambda: self.status_label.configure(
+                    text="Download completed successfully!", text_color="green"
+                ),
+            )
             self.after(0, lambda: self.progress_bar.set(1.0))
         except Exception as e:
             err_msg = str(e)
-            self.after(0, lambda: self.status_label.configure(
-                text=f"Error: {err_msg}", text_color="red"
-            ))
+            self.after(
+                0,
+                lambda: self.status_label.configure(
+                    text=f"Error: {err_msg}", text_color="red"
+                ),
+            )
         finally:
             self.after(0, lambda: self.download_btn.configure(state="normal"))
 

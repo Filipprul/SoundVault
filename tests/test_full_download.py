@@ -10,5 +10,6 @@ def test_download_pipeline():
     downloader.download(test_url)
     print("Test abgeschlossen! Prüfe den Download-Ordner und die ID3-Tags.")
 
+
 if __name__ == "__main__":
     test_download_pipeline()

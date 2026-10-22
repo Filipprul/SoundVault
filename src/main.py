@@ -1,13 +1,30 @@
+import json
 import sys
+from pathlib import Path
 
 from src.downloader import SoundVaultDownloader
+from src.watchdog import PlaylistWatchdog
+
+
+def load_config() -> dict:
+    config_path = Path("config.json")
+    if config_path.exists():
+        try:
+            with open(config_path, "r", encoding="utf-8") as f:
+                return json.load(f)
+        except Exception:  # noqa: S110
+            pass
+    return {
+        "monitored_playlists": [],
+        "watchdog_interval_seconds": 1800,
+    }
 
 
 def get_valid_url() -> str:
     while True:
         url = input("\nEnter YouTube Playlist or Video URL (or 'q' to quit): ").strip()
 
-        if url.lower() in ['q', 'quit', 'exit']:
+        if url.lower() in ["q", "quit", "exit"]:
             print("Operation canceled by user.")
             sys.exit(0)
 
@@ -21,8 +38,16 @@ def get_valid_url() -> str:
 
         return url
 
+
 def main():
     print("=== SoundVault Audio Downloader ===")
+
+    config = load_config()
+    playlists = config.get("monitored_playlists", [])
+    interval = config.get("watchdog_interval_seconds", 1800)
+
+    watchdog = PlaylistWatchdog(playlist_urls=playlists, interval_seconds=interval)
+    watchdog.start()
 
     try:
         url = get_valid_url()
@@ -44,5 +69,5 @@ def main():
         print(f"\nAn unexpected error occurred: {e}")
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     main()

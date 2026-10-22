@@ -15,7 +15,7 @@ class TestSoundVault(unittest.TestCase):
         config_data = {
             "download_dir": str(self.test_dir),
             "audio_format": "mp3",
-            "audio_quality": "0"
+            "audio_quality": "0",
         }
         with open(self.test_config, "w", encoding="utf-8") as f:
             json.dump(config_data, f)
@@ -44,14 +44,15 @@ class TestSoundVault(unittest.TestCase):
 
     def test_metadata_and_thumbnail_postprocessors(self):
         opts = {
-            'postprocessors': [
-                {'key': 'FFmpegMetadata', 'add_metadata': True},
-                {'key': 'EmbedThumbnail'}
+            "postprocessors": [
+                {"key": "FFmpegMetadata", "add_metadata": True},
+                {"key": "EmbedThumbnail"},
             ]
         }
-        keys = [p['key'] for p in opts['postprocessors']]
-        self.assertIn('FFmpegMetadata', keys)
-        self.assertIn('EmbedThumbnail', keys)
+        keys = [p["key"] for p in opts["postprocessors"]]
+        self.assertIn("FFmpegMetadata", keys)
+        self.assertIn("EmbedThumbnail", keys)
 
-if __name__ == '__main__':
+
+if __name__ == "__main__":
     unittest.main()
