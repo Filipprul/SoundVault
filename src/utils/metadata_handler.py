@@ -62,8 +62,8 @@ def get_cover_art_url(release_id: str):
         res = requests.head(url, allow_redirects=True)
         if res.status_code == 200:
             return res.url
-    except Exception:
-        pass # noqa: S110
+    except Exception: # noqa: S110
+        pass
     return None
 
 
