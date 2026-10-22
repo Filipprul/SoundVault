@@ -5,6 +5,9 @@ from pathlib import Path
 
 import yt_dlp
 
+from src.utils.title_cleaner import clean_title
+from src.utils.metadata_handler import fetch_metadata_from_musicbrainz, apply_id3_tags
+
 
 class SoundVaultLogger:
     def __init__(self, status_callback: Callable[[str], None] | None = None):
@@ -26,10 +29,10 @@ class SoundVaultLogger:
 
 class SoundVaultDownloader:
     def __init__(
-        self,
-        config_file: str = "config.json",
-        progress_callback: Callable[[dict], None] | None = None,
-        status_callback: Callable[[str], None] | None = None
+            self,
+            config_file: str = "config.json",
+            progress_callback: Callable[[dict], None] | None = None,
+            status_callback: Callable[[str], None] | None = None
     ):
         self.base_dir = Path(__file__).resolve().parent
         self.config_path = self.base_dir / config_file
@@ -88,11 +91,45 @@ class SoundVaultDownloader:
 
         elif d['status'] == 'finished':
             filename = Path(d.get('filename', '')).name
-            msg = f"\n[Finished] {filename} -> Processing audio & metadata..."
+            msg = f"\n[Finished] {filename} -> Downloading stream complete."
             if self.status_callback:
                 self.status_callback(msg)
             else:
                 print(msg)
+
+    def _postprocessor_hook(self, d: dict) -> None:
+        if d['status'] == 'finished' and d.get('postprocessor_name') == 'FFmpegExtractAudio':
+            msg = "\n[Postprocessor] Audio extracted, applying metadata & tags..."
+            if self.status_callback:
+                self.status_callback(msg)
+            else:
+                print(msg)
+
+            audio_format = self.config.get("audio_format", "mp3")
+            file_path = Path(d.get('info_dict', {}).get('filepath', '')).with_suffix(f".{audio_format}")
+
+            if file_path.exists():
+                info_dict = d.get('info_dict', {})
+                raw_title = info_dict.get('title', file_path.stem)
+
+                cleaned_title = clean_title(raw_title)
+
+                metadata = fetch_metadata_from_musicbrainz(cleaned_title)
+                if metadata:
+                    apply_id3_tags(str(file_path), metadata)
+                    safe_artist = "".join(
+                        c for c in metadata.get('artist', 'Unknown') if c.isalnum() or c in (' ', '-', '_')).strip()
+                    safe_title = "".join(
+                        c for c in metadata.get('title', cleaned_title) if c.isalnum() or c in (' ', '-', '_')).strip()
+                    new_filename = f"{safe_artist} - {safe_title}.{audio_format}"
+                    new_path = file_path.parent / new_filename
+
+                    try:
+                        if file_path != new_path:
+                            file_path.rename(new_path)
+                            print(f"[Metadata] Successfully renamed to: {new_filename}")
+                    except Exception as e:
+                        print(f"[Metadata] Renaming error: {e}")
 
     def download(self, playlist_url: str) -> None:
         if not self.check_network():
@@ -115,10 +152,11 @@ class SoundVaultDownloader:
             'quiet': True,
             'noprogress': True,
             'progress_hooks': [self._progress_hook],
+            'postprocessor_hooks': [self._postprocessor_hook],
             'writethumbnail': True,
 
             'postprocessors': [
-                {'key': 'FFmpegExtractAudio', 'preferredcodec': audio_format, 'preferredquality': audio_quality,},
+                {'key': 'FFmpegExtractAudio', 'preferredcodec': audio_format, 'preferredquality': audio_quality, },
                 {'key': 'FFmpegThumbnailsConvertor', 'format': 'jpg'},
                 {'key': 'FFmpegMetadata', 'add_metadata': True},
                 {'key': 'EmbedThumbnail', 'already_have_thumbnail': False},

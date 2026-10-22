@@ -8,7 +8,6 @@ from src.downloader import SoundVaultDownloader
 
 class TestSoundVault(unittest.TestCase):
     def setUp(self):
-        # Basis-Pfad ist der Hauptordner des Projekts (eine Ebene über dem tests-Ordner)
         self.project_root = Path(__file__).resolve().parent.parent
         self.test_dir = self.project_root / "temp_test_downloads"
         self.test_config = self.project_root / "test_config.json"

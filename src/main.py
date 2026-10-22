@@ -15,7 +15,6 @@ def get_valid_url() -> str:
             print("Error: Input cannot be empty. Please try again.")
             continue
 
-        # PIE810: startswith mit Tuple statt 'or'
         if not url.startswith(("http://", "https://")):
             print("Error: Please enter a valid URL starting with http:// or https://")
             continue
