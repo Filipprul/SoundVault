@@ -1,5 +1,7 @@
 import threading
+
 import customtkinter as ctk
+
 from src.downloader import SoundVaultDownloader
 
 ctk.set_appearance_mode("System")

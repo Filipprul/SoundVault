@@ -5,8 +5,8 @@ from pathlib import Path
 
 import yt_dlp
 
+from src.utils.metadata_handler import apply_id3_tags, fetch_metadata_from_musicbrainz
 from src.utils.title_cleaner import clean_title
-from src.utils.metadata_handler import fetch_metadata_from_musicbrainz, apply_id3_tags
 
 
 class SoundVaultLogger:

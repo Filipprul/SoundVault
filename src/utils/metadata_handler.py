@@ -1,5 +1,5 @@
 import requests
-from mutagen.id3 import ID3, TIT2, TPE1, TALB, TDRC, APIC, error
+from mutagen.id3 import APIC, ID3, TALB, TDRC, TIT2, TPE1, error
 from mutagen.mp3 import MP3
 
 
@@ -63,7 +63,7 @@ def get_cover_art_url(release_id: str):
         if res.status_code == 200:
             return res.url
     except Exception:
-        pass
+        pass # noqa: S110
     return None
 
 
