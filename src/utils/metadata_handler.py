@@ -1,9 +1,13 @@
+import logging
 import requests
 from mutagen.id3 import APIC, ID3, TALB, TDRC, TIT2, TPE1, error
 from mutagen.mp3 import MP3
+from typing import Any
+
+logger = logging.getLogger(__name__)
 
 
-def fetch_metadata_from_musicbrainz(clean_title: str):
+def fetch_metadata_from_musicbrainz(clean_title: str) -> dict[str, Any] | None:
     url = "https://musicbrainz.org/ws/2/recording/"
     headers = {"User-Agent": "SoundVault/1.0 (contact@soundvault.local)"}
 
@@ -18,14 +22,14 @@ def fetch_metadata_from_musicbrainz(clean_title: str):
     params = {"query": query_str, "fmt": "json", "limit": 1}
 
     try:
-        response = requests.get(url, headers=headers, params=params)
+        response = requests.get(url, headers=headers, params=params, timeout=10)
         if response.status_code == 200:
             data = response.json()
             recordings = data.get("recordings", [])
 
             if not recordings and " - " in clean_title:
                 params["query"] = clean_title
-                response = requests.get(url, headers=headers, params=params)
+                response = requests.get(url, headers=headers, params=params, timeout=10)
                 if response.status_code == 200:
                     data = response.json()
                     recordings = data.get("recordings", [])
@@ -54,16 +58,16 @@ def fetch_metadata_from_musicbrainz(clean_title: str):
                     "cover_url": cover_url,
                 }
     except Exception as e:
-        print(f"Fehler bei MusicBrainz API: {e}")
+        logger.error(f"Fehler bei MusicBrainz API: {e}")
     return None
 
 
-def get_cover_art_url(release_id: str):
+def get_cover_art_url(release_id: str) -> str | None:
     if not release_id:
         return None
     url = f"https://coverartarchive.org/release/{release_id}/front"
     try:
-        res = requests.head(url, allow_redirects=True)
+        res = requests.head(url, allow_redirects=True, timeout=10)
         if res.status_code == 200:
             return res.url
     except Exception:  # noqa: S110
@@ -71,7 +75,7 @@ def get_cover_art_url(release_id: str):
     return None
 
 
-def apply_id3_tags(file_path: str, metadata: dict):
+def apply_id3_tags(file_path: str, metadata: dict[str, Any]) -> None:
     try:
         audio = MP3(file_path, ID3=ID3)
         try:
@@ -90,12 +94,12 @@ def apply_id3_tags(file_path: str, metadata: dict):
 
         cover_url = metadata.get("cover_url")
         if cover_url:
-            img_data = requests.get(cover_url).content
+            img_data = requests.get(cover_url, timeout=10).content
             audio.tags.add(
                 APIC(encoding=3, mime="image/jpeg", type=3, desc="Cover", data=img_data)
             )
 
         audio.save()
-        print("ID3 Tags & Cover erfolgreich geschrieben!")
+        logger.info("ID3 Tags & Cover erfolgreich geschrieben!")
     except Exception as e:
-        print(f"Fehler beim Schreiben der ID3-Tags: {e}")
+        logger.error(f"Fehler beim Schreiben der ID3-Tags: {e}")

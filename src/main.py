@@ -1,12 +1,13 @@
 import json
 import sys
 from pathlib import Path
+from typing import Any
 
 from src.downloader import SoundVaultDownloader
 from src.watchdog import PlaylistWatchdog
 
 
-def load_config() -> dict:
+def load_config() -> dict[str, Any]:
     config_path = Path("config.json")
     if config_path.exists():
         try:
@@ -39,7 +40,7 @@ def get_valid_url() -> str:
         return url
 
 
-def main():
+def main() -> None:
     print("=== SoundVault Audio Downloader ===")
 
     config = load_config()

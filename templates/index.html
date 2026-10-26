@@ -1,0 +1,180 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SoundVault Web</title>
+    <link rel="manifest" href="/static/manifest.json">
+    <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-gray-900 text-gray-100 min-h-screen flex flex-col items-center p-4">
+    <div class="w-full max-w-md bg-gray-800 rounded-2xl shadow-xl p-6 border border-gray-700 my-auto">
+        <h1 class="text-3xl font-bold text-center mb-2 text-blue-400">SoundVault</h1>
+        <p class="text-xs text-center text-gray-400 mb-6">Cross-Platform Audio Extraction Engine</p>
+
+        <form id="download-form" class="space-y-4">
+            <div>
+                <label class="block text-sm font-medium text-gray-300 mb-1">Media URL</label>
+                <input type="text" id="url" required placeholder="https://www.youtube.com/watch?v=..."
+                       class="w-full px-4 py-3 bg-gray-900 border border-gray-700 rounded-xl focus:ring-2 focus:ring-blue-500 focus:outline-none text-sm">
+            </div>
+
+            <div class="grid grid-cols-2 gap-4">
+                <div>
+                    <label class="block text-sm font-medium text-gray-300 mb-1">Format</label>
+                    <select id="format" class="w-full px-4 py-3 bg-gray-900 border border-gray-700 rounded-xl focus:ring-2 focus:ring-blue-500 focus:outline-none text-sm">
+                        <option value="mp3">mp3</option>
+                        <option value="m4a">m4a</option>
+                        <option value="flac">flac</option>
+                        <option value="wav">wav</option>
+                        <option value="opus">opus</option>
+                    </select>
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-300 mb-1">Quality</label>
+                    <select id="quality" class="w-full px-4 py-3 bg-gray-900 border border-gray-700 rounded-xl focus:ring-2 focus:ring-blue-500 focus:outline-none text-sm">
+                        <option value="320">320 kbps</option>
+                        <option value="256">256 kbps</option>
+                        <option value="192">192 kbps</option>
+                        <option value="128">128 kbps</option>
+                    </select>
+                </div>
+            </div>
+
+            <div class="flex items-center">
+                <input type="checkbox" id="auto-download" checked class="w-4 h-4 bg-gray-900 border-gray-700 rounded focus:ring-blue-500 focus:ring-2">
+                <label for="auto-download" class="ml-2 text-sm text-gray-300">Automatisch auf Handy herunterladen</label>
+            </div>
+
+            <button type="submit" id="submit-btn"
+                    class="w-full py-3 bg-blue-600 hover:bg-blue-500 font-semibold rounded-xl transition duration-200 shadow-lg shadow-blue-600/30">
+                Start Download
+            </button>
+        </form>
+
+        <div id="status" class="mt-4 text-center text-sm font-medium text-gray-400">Bereit für Downloads</div>
+
+        <!-- Dateiliste für Smartphone-Downloads -->
+        <div class="mt-8 border-t border-gray-700 pt-4">
+            <div class="flex justify-between items-center mb-3">
+                <h2 class="text-sm font-semibold text-gray-300">Heruntergeladene Tracks</h2>
+                <button onclick="loadFiles()" class="text-xs text-blue-400 hover:underline">Aktualisieren</button>
+            </div>
+            <ul id="file-list" class="space-y-2 max-h-48 overflow-y-auto pr-1">
+                <li class="text-xs text-gray-500 text-center py-2">Lade Dateien...</li>
+            </ul>
+        </div>
+    </div>
+
+    <script>
+        const form = document.getElementById('download-form');
+        const statusDiv = document.getElementById('status');
+        const submitBtn = document.getElementById('submit-btn');
+
+        let isDownloading = false;
+        let lastFileCount = -1;
+        let downloadTimeout = null;
+
+        form.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const url = document.getElementById('url').value;
+            const format = document.getElementById('format').value;
+            const quality = document.getElementById('quality').value;
+
+            statusDiv.textContent = "Download läuft auf dem PC...";
+            statusDiv.className = "mt-4 text-center text-sm font-medium text-yellow-400";
+            isDownloading = true;
+            submitBtn.disabled = true;
+            submitBtn.classList.add('opacity-50', 'cursor-not-allowed');
+
+            // Safety-Timeout: Falls nach 45 Sekunden keine Datei ankommt, UI entriegeln
+            if (downloadTimeout) clearTimeout(downloadTimeout);
+            downloadTimeout = setTimeout(() => {
+                if (isDownloading) {
+                    isDownloading = false;
+                    statusDiv.textContent = "Download-Timeout oder Fehler aufgetreten.";
+                    statusDiv.className = "mt-4 text-center text-sm font-medium text-red-400";
+                }
+            }, 45000);
+
+            try {
+                const response = await fetch('/api/download', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ url, format, quality })
+                });
+                const data = await response.json();
+
+                if (response.ok) {
+                    document.getElementById('url').value = '';
+                    loadFiles();
+                } else {
+                    statusDiv.textContent = data.message || "Fehler beim Starten.";
+                    statusDiv.className = "mt-4 text-center text-sm font-medium text-red-400";
+                    isDownloading = false;
+                }
+            } catch (err) {
+                statusDiv.textContent = "Netzwerkfehler aufgetreten.";
+                statusDiv.className = "mt-4 text-center text-sm font-medium text-red-400";
+                isDownloading = false;
+            } finally {
+                submitBtn.disabled = false;
+                submitBtn.classList.remove('opacity-50', 'cursor-not-allowed');
+            }
+        });
+
+        async function loadFiles() {
+            const listEl = document.getElementById('file-list');
+            try {
+                const res = await fetch('/api/files?t=' + new Date().getTime());
+                const files = await res.json();
+
+                if (isDownloading && lastFileCount !== -1 && files.length > lastFileCount) {
+                    statusDiv.textContent = "Download erfolgreich abgeschlossen!";
+                    statusDiv.className = "mt-4 text-center text-sm font-medium text-green-400";
+                    isDownloading = false;
+                    if (downloadTimeout) clearTimeout(downloadTimeout);
+
+                    const autoDownload = document.getElementById('auto-download').checked;
+                    if (autoDownload) {
+                        const newFile = files[files.length - 1];
+                        const downloadLink = document.createElement('a');
+                        downloadLink.href = `/api/files/download/${encodeURIComponent(newFile.path)}`;
+                        downloadLink.download = newFile.name;
+                        document.body.appendChild(downloadLink);
+                        downloadLink.click();
+                        document.body.removeChild(downloadLink);
+                    }
+                } else if (!isDownloading && files.length > 0 && statusDiv.textContent.includes("Bereit")) {
+                    statusDiv.className = "mt-4 text-center text-sm font-medium text-green-400";
+                }
+
+                lastFileCount = files.length;
+
+                if (files.length === 0) {
+                    listEl.innerHTML = '<li class="text-xs text-gray-500 text-center py-2">Noch keine Dateien vorhanden.</li>';
+                    return;
+                }
+
+                listEl.innerHTML = files.map(file => `
+                    <li class="flex justify-between items-center bg-gray-900 px-3 py-2 rounded-lg border border-gray-700/50">
+                        <div class="truncate pr-2">
+                            <p class="text-xs text-gray-200 font-medium truncate">${file.name.replace(/</g, '&lt;').replace(/>/g, '&gt;')}</p>
+                            <p class="text-[10px] text-gray-400">${file.size_mb} MB</p>
+                        </div>
+                        <a href="/api/files/download/${encodeURIComponent(file.path)}" download="${file.name}"
+                           class="px-2.5 py-1 bg-blue-600/20 text-blue-400 hover:bg-blue-600 hover:text-white text-xs font-medium rounded-md transition flex-shrink-0">
+                            Download
+                        </a>
+                    </li>
+                `).join('');
+            } catch (err) {
+                listEl.innerHTML = '<li class="text-xs text-red-400 text-center py-2">Fehler beim Laden der Dateien.</li>';
+            }
+        }
+
+        loadFiles();
+        setInterval(loadFiles, 120000);
+    </script>
+</body>
+</html>

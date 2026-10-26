@@ -1,5 +1,7 @@
 import logging
 import threading
+from collections.abc import Callable
+from typing import Any
 
 import yt_dlp
 
@@ -12,10 +14,10 @@ logger = logging.getLogger(__name__)
 class PlaylistWatchdog:
     def __init__(
         self,
-        playlist_urls: list,
+        playlist_urls: list[str],
         interval_seconds: int = 1800,
-        status_callback=None,
-    ):
+        status_callback: Callable[[str], None] | None = None,
+    ) -> None:
         self.playlist_urls = [
             url for url in playlist_urls if url and "Insert playlist-url" not in url
         ]
@@ -24,7 +26,7 @@ class PlaylistWatchdog:
         self.downloader = SoundVaultDownloader()
         self.status_callback = status_callback
 
-    def _notify(self, message: str):
+    def _notify(self, message: str) -> None:
         logger.info(message)
         if self.status_callback:
             try:
@@ -32,7 +34,7 @@ class PlaylistWatchdog:
             except Exception: # noqa: S110
                 pass
 
-    def start(self):
+    def start(self) -> None:
         if not self.playlist_urls:
             return
 
@@ -40,14 +42,14 @@ class PlaylistWatchdog:
         thread.start()
         self._notify("Playlist Watchdog started in background.")
 
-    def _run_loop(self):
+    def _run_loop(self) -> None:
         while not self._stop_event.is_set():
             for url in self.playlist_urls:
                 if self._stop_event.is_set():
                     break
                 try:
                     self._notify(f"Checking playlist: {url}")
-                    ydl_opts = {
+                    ydl_opts: dict[str, Any] = {
                         "extract_flat": True,
                         "skip_download": True,
                         "quiet": True,
@@ -70,6 +72,9 @@ class PlaylistWatchdog:
                                         or f"https://www.youtube.com/watch?v={video_id}"
                                     )
                                     try:
+                                        if not self.downloader.check_network():
+                                            self._notify("Keine Internetverbindung - Download übersprungen")
+                                            continue
                                         self.downloader.download(track_url)
                                         mark_as_downloaded(video_id, title)
                                         self._notify(f"Downloaded: {title}")
@@ -86,6 +91,6 @@ class PlaylistWatchdog:
 
             self._stop_event.wait(self.interval_seconds)
 
-    def stop(self):
+    def stop(self) -> None:
         self._stop_event.set()
         self._notify("Playlist Watchdog stopped.")

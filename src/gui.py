@@ -1,6 +1,8 @@
 import json
 import threading
+from collections.abc import Callable
 from pathlib import Path
+from typing import Any
 
 import customtkinter as ctk
 
@@ -11,7 +13,7 @@ ctk.set_appearance_mode("System")
 ctk.set_default_color_theme("blue")
 
 
-def load_config() -> dict:
+def load_config() -> dict[str, Any]:
     config_path = Path("config.json")
     if config_path.exists():
         try:
@@ -27,7 +29,7 @@ def load_config() -> dict:
 
 class SoundVaultApp(ctk.CTk):
 
-    def __init__(self):
+    def __init__(self) -> None:
         super().__init__()
 
         self.title("SoundVault - Audio Downloader")
@@ -42,19 +44,22 @@ class SoundVaultApp(ctk.CTk):
         self.watchdog = PlaylistWatchdog(
             playlist_urls=playlists,
             interval_seconds=interval,
-            status_callback=lambda msg: self.after(0, lambda: self.status_label.configure(text=msg)),
+            status_callback=self._update_watchdog_status,
         )
         self.watchdog.start()
 
         self._create_widgets()
 
-    def destroy(self):
+    def destroy(self) -> None:
         # Watchdog beim Schließen der App sauber beenden
         if hasattr(self, "watchdog"):
             self.watchdog.stop()
         super().destroy()
 
-    def _create_widgets(self):
+    def _update_watchdog_status(self, msg: str) -> None:
+        self.after(0, lambda: self.status_label.configure(text=msg))
+
+    def _create_widgets(self) -> None:
         self.title_label = ctk.CTkLabel(
             self, text="SoundVault", font=ctk.CTkFont(size=26, weight="bold")
         )
@@ -111,7 +116,7 @@ class SoundVaultApp(ctk.CTk):
         )
         self.status_label.pack(padx=20, pady=5)
 
-    def start_download_thread(self):
+    def start_download_thread(self) -> None:
         url = self.url_entry.get().strip()
         if not url:
             self.status_label.configure(
@@ -130,7 +135,7 @@ class SoundVaultApp(ctk.CTk):
         )
         thread.start()
 
-    def update_progress(self, d):
+    def update_progress(self, d: dict[str, Any]) -> None:
         if d.get("status") == "downloading":
             total = d.get("total_bytes") or d.get("total_bytes_estimate")
             downloaded = d.get("downloaded_bytes", 0)
@@ -160,7 +165,7 @@ class SoundVaultApp(ctk.CTk):
                 ),
             )
 
-    def run_download(self, url):
+    def run_download(self, url: str) -> None:
         try:
             audio_format = self.format_option.get()
             quality = self.quality_option.get()

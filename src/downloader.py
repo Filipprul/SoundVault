@@ -2,6 +2,7 @@ import json
 import socket
 from collections.abc import Callable
 from pathlib import Path
+from typing import Any
 
 import yt_dlp
 
@@ -10,16 +11,16 @@ from src.utils.title_cleaner import clean_title
 
 
 class SoundVaultLogger:
-    def __init__(self, status_callback: Callable[[str], None] | None = None):
+    def __init__(self, status_callback: Callable[[str], None] | None = None) -> None:
         self.status_callback = status_callback
 
-    def debug(self, msg):
+    def debug(self, msg: str) -> None:
         pass
 
-    def warning(self, msg):
+    def warning(self, msg: str) -> None:
         pass
 
-    def error(self, msg):
+    def error(self, msg: str) -> None:
         if (
             "getaddrinfo failed" in msg
             or "TransportError" in msg
@@ -35,9 +36,9 @@ class SoundVaultDownloader:
     def __init__(
         self,
         config_file: str = "config.json",
-        progress_callback: Callable[[dict], None] | None = None,
+        progress_callback: Callable[[dict[str, Any]], None] | None = None,
         status_callback: Callable[[str], None] | None = None,
-    ):
+    ) -> None:
         self.base_dir = Path(__file__).resolve().parent.parent
         self.config_path = self.base_dir / config_file
         self.config = self._load_config()
@@ -50,8 +51,8 @@ class SoundVaultDownloader:
         )
         self.download_directory.mkdir(parents=True, exist_ok=True)
 
-    def _load_config(self) -> dict:
-        default_config = {
+    def _load_config(self) -> dict[str, Any]:
+        default_config: dict[str, Any] = {
             "download_dir": "downloads",
             "audio_format": "mp3",
             "audio_quality": "0",
@@ -76,7 +77,7 @@ class SoundVaultDownloader:
         except OSError:
             return False
 
-    def _progress_hook(self, d: dict) -> None:
+    def _progress_hook(self, d: dict[str, Any]) -> None:
         if not self.check_network():
             msg = "Internetverbindung während des Downloads verloren!"
             if self.status_callback:
@@ -106,7 +107,7 @@ class SoundVaultDownloader:
             else:
                 print(msg)
 
-    def _postprocessor_hook(self, d: dict) -> None:
+    def _postprocessor_hook(self, d: dict[str, Any]) -> None:
         if (
             d["status"] == "finished"
             and d.get("postprocessor_name") == "FFmpegExtractAudio"
@@ -147,8 +148,13 @@ class SoundVaultDownloader:
 
                     try:
                         if file_path != new_path:
+                            if new_path.exists():
+                                counter = 1
+                                while new_path.exists():
+                                    new_path = file_path.parent / f"{safe_artist} - {safe_title}_{counter}.{audio_format}"
+                                    counter += 1
                             file_path.rename(new_path)
-                            print(f"[Metadata] Successfully renamed to: {new_filename}")
+                            print(f"[Metadata] Successfully renamed to: {new_path.name}")
                     except Exception as e:
                         print(f"[Metadata] Renaming error: {e}")
 
@@ -161,7 +167,7 @@ class SoundVaultDownloader:
         audio_format = self.config.get("audio_format", "mp3")
         audio_quality = self.config.get("audio_quality", "0")
 
-        ydl_opts = {
+        ydl_opts: dict[str, Any] = {
             "format": "bestaudio/best",
             "outtmpl": {
                 "default": str(
